@@ -18,6 +18,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Month;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -80,6 +81,13 @@ public final class RifLoaderIT {
               .getResultList();
       for (BeneficiaryHistory beneHistory : beneficiaryHistoryEntries) {
         Assert.assertEquals("567834", beneHistory.getBeneficiaryId());
+        Assert.assertNotNull("Expected a lastUpdated field", beneHistory.getLastUpdated());
+        Assert.assertTrue(
+            "Expected a recent lastUpdated timestamp",
+            beneHistory
+                .getLastUpdated()
+                .toInstant()
+                .isAfter(Instant.now().minus(1, ChronoUnit.MINUTES)));
       }
       Assert.assertEquals(4, beneficiaryHistoryEntries.size());
 
@@ -90,11 +98,19 @@ public final class RifLoaderIT {
       Assert.assertEquals("John", beneficiaryFromDb.getNameGiven());
       Assert.assertEquals(new Character('A'), beneficiaryFromDb.getNameMiddleInitial().get());
       Assert.assertEquals(
-          "Beneficiary has MBI", Optional.of("SSSS"), beneficiaryFromDb.getMedicareBeneficiaryId());
+        "Beneficiary has MBI", Optional.of("SSSS"), beneficiaryFromDb.getMedicareBeneficiaryId());
       Assert.assertEquals(
           "Beneficiary has mbiHash",
           Optional.of("401441595efcc68bc5b26f4e88bd9fa550004e068d69ff75761ab946ec553a02"),
           beneficiaryFromDb.getMbiHash());
+      // A recent lastUpdated timestamp
+      Assert.assertNotNull("Expected a lastUpdated field", beneficiaryFromDb.getLastUpdated());
+      Assert.assertTrue(
+          "Expected a recent lastUpdated timestamp",
+          beneficiaryFromDb
+              .getLastUpdated()
+              .toInstant()
+              .isAfter(Instant.now().minus(1, ChronoUnit.MINUTES)));
 
       CarrierClaim carrierRecordFromDb = entityManager.find(CarrierClaim.class, "9991831999");
       Assert.assertEquals('N', carrierRecordFromDb.getFinalAction());
@@ -102,6 +118,14 @@ public final class RifLoaderIT {
       Assert.assertEquals(
           LocalDate.of(2000, Month.OCTOBER, 27), carrierRecordFromDb.getDateThrough());
       Assert.assertEquals(1, carrierRecordFromDb.getLines().size());
+      // A recent lastUpdated timestamp
+      Assert.assertNotNull("Expected a lastUpdated field", carrierRecordFromDb.getLastUpdated());
+      Assert.assertTrue(
+          "Expected a recent lastUpdated timestamp",
+          carrierRecordFromDb
+              .getLastUpdated()
+              .toInstant()
+              .isAfter(Instant.now().minus(1, ChronoUnit.MINUTES)));
 
       CarrierClaimLine carrierLineRecordFromDb = carrierRecordFromDb.getLines().get(0);
       // CliaLabNumber inserted with value BB889999AA
