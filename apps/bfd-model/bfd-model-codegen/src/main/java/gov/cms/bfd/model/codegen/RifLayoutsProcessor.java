@@ -770,7 +770,7 @@ public final class RifLayoutsProcessor extends AbstractProcessor {
       MethodSpec lastUpdatedGetter =
           MethodSpec.methodBuilder("getLastUpdated")
               .addModifiers(Modifier.PUBLIC)
-              .addStatement("return Optional.of(lastUpdated)")
+              .addStatement("return Optional.ofNullable(lastUpdated)")
               .returns(ParameterizedTypeName.get(Optional.class, OffsetDateTime.class))
               .build();
       headerEntityClass.addMethod(lastUpdatedGetter);
