@@ -18,9 +18,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Month;
-import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -32,6 +32,8 @@ import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
 import javax.sql.DataSource;
+
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -90,7 +92,7 @@ public final class RifLoaderIT {
                 lastUpdated -> {
                   Assert.assertTrue(
                       "Expected a recent lastUpdated timestamp",
-                      lastUpdated.isAfter(OffsetDateTime.now().minus(1, ChronoUnit.MINUTES)));
+                      lastUpdated.after(Date.from(Instant.now().minus(1, ChronoUnit.MINUTES))));
                 });
       }
       Assert.assertEquals(4, beneficiaryHistoryEntries.size());
@@ -116,7 +118,7 @@ public final class RifLoaderIT {
               lastUpdated -> {
                 Assert.assertTrue(
                     "Expected a recent lastUpdated timestamp",
-                    lastUpdated.isAfter(OffsetDateTime.now().minus(1, ChronoUnit.MINUTES)));
+                    lastUpdated.after(Date.from(Instant.now().minus(1, ChronoUnit.MINUTES))));
               });
 
       CarrierClaim carrierRecordFromDb = entityManager.find(CarrierClaim.class, "9991831999");
@@ -134,7 +136,7 @@ public final class RifLoaderIT {
               lastUpdated -> {
                 Assert.assertTrue(
                     "Expected a recent lastUpdated timestamp",
-                    lastUpdated.isAfter(OffsetDateTime.now().minus(1, ChronoUnit.MINUTES)));
+                    lastUpdated.after(Date.from(Instant.now().minus(1, ChronoUnit.MINUTES))));
               });
 
       CarrierClaimLine carrierLineRecordFromDb = carrierRecordFromDb.getLines().get(0);
@@ -398,6 +400,15 @@ public final class RifLoaderIT {
     }
     LOGGER.info("All records found in DB.");
     loader.close();
+  }
+
+  /**
+   * Ensures that {@link gov.cms.bfd.pipeline.rif.load.RifLoaderTestUtils#cleanDatabaseServer} is
+   * called after each test case.
+   */
+  @After
+  public void cleanDatabaseServerAfterEachTestCase() {
+    RifLoaderTestUtils.cleanDatabaseServer(RifLoaderTestUtils.getLoadOptions());
   }
 
   /**

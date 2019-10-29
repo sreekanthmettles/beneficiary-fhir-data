@@ -27,9 +27,9 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -757,7 +757,7 @@ public final class RifLayoutsProcessor extends AbstractProcessor {
     if (mappingSpec.getHasLastUpdated()) {
       // lastUpdated field
       FieldSpec lastUpdatedField =
-          FieldSpec.builder(OffsetDateTime.class, "lastUpdated", Modifier.PRIVATE)
+          FieldSpec.builder(Date.class, "lastUpdated", Modifier.PRIVATE)
               .addAnnotation(
                   AnnotationSpec.builder(Column.class)
                       .addMember("name", "$S", "lastUpdated")
@@ -772,7 +772,7 @@ public final class RifLayoutsProcessor extends AbstractProcessor {
           MethodSpec.methodBuilder("getLastUpdated")
               .addModifiers(Modifier.PUBLIC)
               .addStatement("return Optional.ofNullable(lastUpdated)")
-              .returns(ParameterizedTypeName.get(Optional.class, OffsetDateTime.class))
+              .returns(ParameterizedTypeName.get(Optional.class, Date.class))
               .build();
       headerEntityClass.addMethod(lastUpdatedGetter);
 
@@ -780,7 +780,7 @@ public final class RifLayoutsProcessor extends AbstractProcessor {
       MethodSpec lastUpdatedSetter =
           MethodSpec.methodBuilder("setLastUpdated")
               .addModifiers(Modifier.PUBLIC)
-              .addParameter(ParameterSpec.builder(OffsetDateTime.class, "lastUpdated").build())
+              .addParameter(ParameterSpec.builder(Date.class, "lastUpdated").build())
               .addStatement("this.lastUpdated = lastUpdated")
               .returns(TypeName.VOID)
               .build();
