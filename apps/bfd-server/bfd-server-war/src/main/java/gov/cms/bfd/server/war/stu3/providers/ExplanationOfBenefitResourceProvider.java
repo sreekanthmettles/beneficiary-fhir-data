@@ -40,8 +40,6 @@ import org.hl7.fhir.dstu3.model.Bundle;
 import org.hl7.fhir.dstu3.model.ExplanationOfBenefit;
 import org.hl7.fhir.dstu3.model.IdType;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
@@ -57,12 +55,10 @@ public final class ExplanationOfBenefitResourceProvider implements IResourceProv
    */
   private static final Pattern EOB_ID_PATTERN = Pattern.compile("(\\p{Alpha}+)-(\\p{Alnum}+)");
 
-  private static final Logger LOGGER =
-      LoggerFactory.getLogger(ExplanationOfBenefitResourceProvider.class);
-
   private EntityManager entityManager;
   private MetricRegistry metricRegistry;
   private SamhsaMatcher samhsaMatcher;
+  private ClusterFilterManager clusterFilterManager;
 
   /** @param entityManager a JPA {@link EntityManager} connected to the application's database */
   @PersistenceContext
@@ -80,6 +76,12 @@ public final class ExplanationOfBenefitResourceProvider implements IResourceProv
   @Inject
   public void setSamhsaFilterer(SamhsaMatcher samhsaMatcher) {
     this.samhsaMatcher = samhsaMatcher;
+  }
+
+  /** @param clusterFilterManager the {@link ClusterFilterManager} to use */
+  @Inject
+  public void setClusterFilterManager(ClusterFilterManager clusterFilterManager) {
+    this.clusterFilterManager = clusterFilterManager;
   }
 
   /** @see ca.uhn.fhir.rest.server.IResourceProvider#getResourceType() */
@@ -200,7 +202,7 @@ public final class ExplanationOfBenefitResourceProvider implements IResourceProv
     /*
      * Optimize when the lastUpdated parameter is specified and result set is empty
      */
-    if (lastUpdated != null && isResultSetEmpty(lastUpdated)) {
+    if (lastUpdated != null && isResultSetEmpty(beneficiaryId, lastUpdated)) {
       return TransformerUtils.createBundle(
           requestDetails,
           lastUpdated,
@@ -265,8 +267,25 @@ public final class ExplanationOfBenefitResourceProvider implements IResourceProv
         eobs);
   }
 
-  private boolean isResultSetEmpty(DateRangeParam lastUpdatedParam) {
-    return false;
+  /**
+   * Is the result set going to be empty for this bene and time period?
+   *
+   * @param beneficiaryId to test
+   * @param lastUpdatedParam to test
+   * @return true if the results set is empty. false if the result set may contain items.
+   */
+  private boolean isResultSetEmpty(String beneficiaryId, DateRangeParam lastUpdatedParam) {
+    boolean matchFound = false;
+    List<ClusterFilter> filters = clusterFilterManager.getFilters();
+    for (ClusterFilter filter : filters) {
+      if (filter.matchesDateRange(lastUpdatedParam)) {
+        matchFound = true;
+        if (filter.mightContain(beneficiaryId)) {
+          return false;
+        }
+      }
+    }
+    return matchFound;
   }
 
   /*
