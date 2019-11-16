@@ -1,11 +1,7 @@
 package gov.cms.bfd.pipeline.rif.load;
 
-import gov.cms.bfd.model.rif.schema.DatabaseTestHelper;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
 import javax.crypto.SecretKeyFactory;
 import org.junit.Assert;
 import org.junit.Test;
