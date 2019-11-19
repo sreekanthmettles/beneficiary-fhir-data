@@ -21,7 +21,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -57,7 +56,7 @@ public final class RifLoaderIT {
   }
 
   @Test
-  public void loadBeneficiaries() {
+  public void singleFileLoad() {
     RifLoaderTestUtils.doTestWithDb(
         (dataSource, entityManager) -> {
           // Verify that LoadedFile entity
@@ -73,9 +72,9 @@ public final class RifLoaderIT {
               loadedFile.getFirstUpdated().compareTo(loadedFile.getLastUpdated()) <= 0);
 
           // Verify that beneficiaries table was loaded
-          final List<String> ids = loadBeneficiaries(loadedFile);
-          Assert.assertTrue("Expected to have at least one beneficiary loaded", ids.size() > 0);
-          Assert.assertEquals("Expected to match the sample-a beneficiary", "567834", ids.get(0));
+          final String[] ids = loadBeneficiaries(loadedFile);
+          Assert.assertTrue("Expected to have at least one beneficiary loaded", ids.length > 0);
+          Assert.assertEquals("Expected to match the sample-a beneficiary", "567834", ids[0]);
         });
   }
 
@@ -163,8 +162,8 @@ public final class RifLoaderIT {
           final List<LoadedFile> loadedFiles = RifLoaderTestUtils.findLoadedFiles(entityManager);
           Assert.assertTrue("Expected to have at least one file", loadedFiles.size() > 0);
           final LoadedFile file = loadedFiles.get(0);
-          final List<String> benes = loadBeneficiaries(file);
-          Assert.assertTrue(benes.size() > 0);
+          final String[] benes = loadBeneficiaries(file);
+          Assert.assertTrue(benes.length > 0);
         });
   }
 
@@ -522,9 +521,15 @@ public final class RifLoaderIT {
     loader.close();
   }
 
-  private ArrayList<String> loadBeneficiaries(LoadedFile file) {
+  /**
+   * Get an array of beneficiary ids that was loaded
+   *
+   * @param file that was loaded
+   * @return array of ids
+   */
+  private String[] loadBeneficiaries(LoadedFile file) {
     try {
-      return FilterSerialization.deserializeBeneficiaries(file.getFilterBytes());
+      return FilterSerialization.deserialize(file.getFilterType(), file.getFilterBytes());
     } catch (Exception ex) {
       Assert.fail("Deserialize of loaded beneficiaries failed");
       return null;
