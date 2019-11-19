@@ -756,7 +756,7 @@ public final class RifLayoutsProcessor extends AbstractProcessor {
     // Add a lastUpdated field. Use the Hibernate UpdateTimestamp feature to set this field.
     if (mappingSpec.getHasLastUpdated()) {
       // lastUpdated field
-      FieldSpec lastUpdatedField =
+      final FieldSpec lastUpdatedField =
           FieldSpec.builder(Date.class, "lastUpdated", Modifier.PRIVATE)
               .addAnnotation(
                   AnnotationSpec.builder(Column.class)
@@ -768,7 +768,7 @@ public final class RifLayoutsProcessor extends AbstractProcessor {
       headerEntityClass.addField(lastUpdatedField);
 
       // Getter method
-      MethodSpec lastUpdatedGetter =
+      final MethodSpec lastUpdatedGetter =
           MethodSpec.methodBuilder("getLastUpdated")
               .addModifiers(Modifier.PUBLIC)
               .addStatement("return Optional.ofNullable(lastUpdated)")
@@ -777,7 +777,7 @@ public final class RifLayoutsProcessor extends AbstractProcessor {
       headerEntityClass.addMethod(lastUpdatedGetter);
 
       // Setter method which is useful for testing, but not needed in the main modules
-      MethodSpec lastUpdatedSetter =
+      final MethodSpec lastUpdatedSetter =
           MethodSpec.methodBuilder("setLastUpdated")
               .addModifiers(Modifier.PUBLIC)
               .addParameter(ParameterSpec.builder(Date.class, "lastUpdated").build())

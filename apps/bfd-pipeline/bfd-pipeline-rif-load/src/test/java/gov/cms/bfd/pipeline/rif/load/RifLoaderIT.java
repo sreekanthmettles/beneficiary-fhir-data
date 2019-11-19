@@ -62,10 +62,10 @@ public final class RifLoaderIT {
         (dataSource, entityManager) -> {
           // Verify that LoadedFile entity
           loadSample(dataSource, StaticRifResourceGroup.SAMPLE_A);
-          List<LoadedFile> loadedFiles = RifLoaderTestUtils.findLoadedFiles(entityManager);
+          final List<LoadedFile> loadedFiles = RifLoaderTestUtils.findLoadedFiles(entityManager);
           Assert.assertTrue(
               "Expected to have many loaded files in SAMPLE A", loadedFiles.size() > 1);
-          LoadedFile loadedFile = loadedFiles.get(0);
+          final LoadedFile loadedFile = loadedFiles.get(0);
           Assert.assertNotNull(loadedFile.getLastUpdated());
           Assert.assertNotNull(loadedFile.getFirstUpdated());
           Assert.assertTrue(
@@ -73,7 +73,7 @@ public final class RifLoaderIT {
               loadedFile.getFirstUpdated().compareTo(loadedFile.getLastUpdated()) <= 0);
 
           // Verify that beneficiaries table was loaded
-          List<String> ids = loadBeneficiaries(loadedFile);
+          final List<String> ids = loadBeneficiaries(loadedFile);
           Assert.assertTrue("Expected to have at least one beneficiary loaded", ids.size() > 0);
           Assert.assertEquals("Expected to match the sample-a beneficiary", "567834", ids.get(0));
         });
@@ -85,7 +85,8 @@ public final class RifLoaderIT {
         (dataSource, entityManager) -> {
           // Verify that a loaded files exsits
           loadSample(dataSource, StaticRifResourceGroup.SAMPLE_A);
-          List<LoadedFile> beforeLoadedFiles = RifLoaderTestUtils.findLoadedFiles(entityManager);
+          final List<LoadedFile> beforeLoadedFiles =
+              RifLoaderTestUtils.findLoadedFiles(entityManager);
           Assert.assertTrue("Expected to have at least one file", beforeLoadedFiles.size() > 0);
           LoadedFile beforeLoadedFile = beforeLoadedFiles.get(0);
           LoadedFile beforeOldestFile = beforeLoadedFiles.get(beforeLoadedFiles.size() - 1);
@@ -94,12 +95,13 @@ public final class RifLoaderIT {
           loadSample(dataSource, StaticRifResourceGroup.SAMPLE_U);
 
           // Verify that the loaded list was updated properly
-          List<LoadedFile> afterLoadedFiles = RifLoaderTestUtils.findLoadedFiles(entityManager);
+          final List<LoadedFile> afterLoadedFiles =
+              RifLoaderTestUtils.findLoadedFiles(entityManager);
           Assert.assertTrue(
               "Expected to have more loaded files",
               beforeLoadedFiles.size() < afterLoadedFiles.size());
-          LoadedFile afterLoadedFile = afterLoadedFiles.get(0);
-          LoadedFile afterOldestFile = afterLoadedFiles.get(afterLoadedFiles.size() - 1);
+          final LoadedFile afterLoadedFile = afterLoadedFiles.get(0);
+          final LoadedFile afterOldestFile = afterLoadedFiles.get(afterLoadedFiles.size() - 1);
           Assert.assertEquals(
               "Expected same oldest file",
               beforeOldestFile.getLoadedFileId(),
@@ -119,8 +121,8 @@ public final class RifLoaderIT {
         (dataSource, entityManager) -> {
           // Setup a loaded file with an old date
           loadSample(dataSource, StaticRifResourceGroup.SAMPLE_A);
-          List<LoadedFile> loadedFiles = RifLoaderTestUtils.findLoadedFiles(entityManager);
-          EntityTransaction txn = entityManager.getTransaction();
+          final List<LoadedFile> loadedFiles = RifLoaderTestUtils.findLoadedFiles(entityManager);
+          final EntityTransaction txn = entityManager.getTransaction();
           txn.begin();
           LoadedFile oldFile = loadedFiles.get(loadedFiles.size() - 1);
           oldFile.setFirstUpdated(Date.from(Instant.now().minus(101, ChronoUnit.DAYS)));
@@ -128,8 +130,8 @@ public final class RifLoaderIT {
           txn.commit();
 
           // Look at the files now
-          List<LoadedFile> beforeFiles = RifLoaderTestUtils.findLoadedFiles(entityManager);
-          Date oldDate = Date.from(Instant.now().minus(99, ChronoUnit.DAYS));
+          final List<LoadedFile> beforeFiles = RifLoaderTestUtils.findLoadedFiles(entityManager);
+          final Date oldDate = Date.from(Instant.now().minus(99, ChronoUnit.DAYS));
           Assert.assertTrue(
               "Expect to have old files",
               beforeFiles.stream().anyMatch(file -> file.getLastUpdated().before(oldDate)));
@@ -138,7 +140,7 @@ public final class RifLoaderIT {
           loadSample(dataSource, StaticRifResourceGroup.SAMPLE_U);
 
           // Verify that old file was trimmed
-          List<LoadedFile> afterFiles = RifLoaderTestUtils.findLoadedFiles(entityManager);
+          final List<LoadedFile> afterFiles = RifLoaderTestUtils.findLoadedFiles(entityManager);
           Assert.assertFalse(
               "Expect to not have old files",
               afterFiles.stream().anyMatch(file -> file.getLastUpdated().before(oldDate)));
@@ -158,10 +160,10 @@ public final class RifLoaderIT {
         (dataSource, entityManager) -> {
           loadSample(dataSource, StaticRifResourceGroup.SYNTHETIC_DATA);
           // Verify that a loaded files exsits
-          List<LoadedFile> loadedFiles = RifLoaderTestUtils.findLoadedFiles(entityManager);
+          final List<LoadedFile> loadedFiles = RifLoaderTestUtils.findLoadedFiles(entityManager);
           Assert.assertTrue("Expected to have at least one file", loadedFiles.size() > 0);
-          LoadedFile file = loadedFiles.get(0);
-          List<String> benes = loadBeneficiaries(file);
+          final LoadedFile file = loadedFiles.get(0);
+          final List<String> benes = loadBeneficiaries(file);
           Assert.assertTrue(benes.size() > 0);
         });
   }
