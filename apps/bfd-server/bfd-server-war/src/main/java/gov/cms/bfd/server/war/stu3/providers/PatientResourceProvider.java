@@ -59,6 +59,7 @@ public final class PatientResourceProvider implements IResourceProvider {
 
   private EntityManager entityManager;
   private MetricRegistry metricRegistry;
+  private LoadedFilterManager loadedFilterManager;
 
   /** @param entityManager a JPA {@link EntityManager} connected to the application's database */
   @PersistenceContext
@@ -70,6 +71,12 @@ public final class PatientResourceProvider implements IResourceProvider {
   @Inject
   public void setMetricRegistry(MetricRegistry metricRegistry) {
     this.metricRegistry = metricRegistry;
+  }
+
+  /** @param loadedFilterManager the {@link LoadedFilterManager} to use */
+  @Inject
+  public void setLoadedFilterManager(LoadedFilterManager loadedFilterManager) {
+    this.loadedFilterManager = loadedFilterManager;
   }
 
   /** @see ca.uhn.fhir.rest.server.IResourceProvider#getResourceType() */
@@ -184,15 +191,16 @@ public final class PatientResourceProvider implements IResourceProvider {
       throw new InvalidRequestException(
           "Unsupported query parameter value: " + logicalId.getValue());
 
-    List<IBaseResource> patients;
+    List<IBaseResource> patients = new LinkedList<>();
     try {
-      Patient patient = read(new IdType(logicalId.getValue()), requestDetails);
-      patients =
-          QueryUtils.isInRange(patient.getMeta().getLastUpdated(), lastUpdated)
-              ? Arrays.asList(patient)
-              : Arrays.asList();
+      // Optimize by using the filters to avoid a DB calls
+      if (!loadedFilterManager.isResultSetEmpty(logicalId.getValue(), lastUpdated)) {
+        Patient patient = read(new IdType(logicalId.getValue()), requestDetails);
+        if (QueryUtils.isInRange(patient.getMeta().getLastUpdated(), lastUpdated)) {
+          patients = Arrays.asList(patient);
+        }
+      }
     } catch (ResourceNotFoundException e) {
-      patients = new LinkedList<>();
     }
 
     Bundle bundle =
