@@ -38,6 +38,7 @@ public final class RifLoaderTestUtils {
   /** The value to use for {@link LoadAppOptions#isFixupsEnabled()} */
   public static final boolean FIXUPS_ENABLED = false;
   
+  @SuppressWarnings("unused")
   private static final Logger LOGGER = LoggerFactory.getLogger(RifLoaderTestUtils.class);
 
   /**
