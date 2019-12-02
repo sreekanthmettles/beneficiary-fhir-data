@@ -7,7 +7,7 @@ import gov.cms.bfd.model.rif.BeneficiaryHistory;
 import gov.cms.bfd.model.rif.BeneficiaryHistory_;
 import gov.cms.bfd.model.rif.CarrierClaim;
 import gov.cms.bfd.model.rif.CarrierClaimLine;
-import gov.cms.bfd.model.rif.FilterSerialization;
+import gov.cms.bfd.model.rif.LoadedBatch;
 import gov.cms.bfd.model.rif.LoadedFile;
 import gov.cms.bfd.model.rif.RifFileEvent;
 import gov.cms.bfd.model.rif.RifFileRecords;
@@ -65,16 +65,17 @@ public final class RifLoaderIT {
           Assert.assertTrue(
               "Expected to have many loaded files in SAMPLE A", loadedFiles.size() > 1);
           final LoadedFile loadedFile = loadedFiles.get(0);
-          Assert.assertNotNull(loadedFile.getLastUpdated());
-          Assert.assertNotNull(loadedFile.getFirstUpdated());
-          Assert.assertTrue(
-              "Expected first updated is before last updated",
-              loadedFile.getFirstUpdated().compareTo(loadedFile.getLastUpdated()) <= 0);
+          Assert.assertNotNull(loadedFile.getCreated());
 
           // Verify that beneficiaries table was loaded
-          final String[] ids = loadBeneficiaries(loadedFile);
-          Assert.assertTrue("Expected to have at least one beneficiary loaded", ids.length > 0);
-          Assert.assertEquals("Expected to match the sample-a beneficiary", "567834", ids[0]);
+          final List<LoadedBatch> batches =
+              loadBatches(entityManager, loadedFile.getLoadedFileId());
+          final LoadedBatch allBatches = batches.stream().reduce(null, LoadedBatch::combine);
+          Assert.assertTrue("Expected to have at least one beneficiary loaded", batches.size() > 0);
+          Assert.assertEquals(
+              "Expected to match the sample-a beneficiary",
+              "567834",
+              allBatches.getBeneficiaries().get(0));
         });
   }
 
@@ -107,10 +108,7 @@ public final class RifLoaderIT {
               afterOldestFile.getLoadedFileId());
           Assert.assertTrue(
               "Expected range to expand",
-              beforeLoadedFile
-                  .getLastUpdated()
-                  .toInstant()
-                  .isBefore(afterLoadedFile.getLastUpdated().toInstant()));
+              beforeLoadedFile.getCreated().before(afterLoadedFile.getCreated()));
         });
   }
 
@@ -124,8 +122,7 @@ public final class RifLoaderIT {
           final EntityTransaction txn = entityManager.getTransaction();
           txn.begin();
           LoadedFile oldFile = loadedFiles.get(loadedFiles.size() - 1);
-          oldFile.setFirstUpdated(Date.from(Instant.now().minus(101, ChronoUnit.DAYS)));
-          oldFile.setLastUpdated(Date.from(Instant.now().minus(100, ChronoUnit.DAYS)));
+          oldFile.setCreated(Date.from(Instant.now().minus(101, ChronoUnit.DAYS)));
           txn.commit();
 
           // Look at the files now
@@ -133,7 +130,7 @@ public final class RifLoaderIT {
           final Date oldDate = Date.from(Instant.now().minus(99, ChronoUnit.DAYS));
           Assert.assertTrue(
               "Expect to have old files",
-              beforeFiles.stream().anyMatch(file -> file.getLastUpdated().before(oldDate)));
+              beforeFiles.stream().anyMatch(file -> file.getCreated().before(oldDate)));
 
           // Load another set that will cause the old file to be trimmed
           loadSample(dataSource, StaticRifResourceGroup.SAMPLE_U);
@@ -142,7 +139,7 @@ public final class RifLoaderIT {
           final List<LoadedFile> afterFiles = RifLoaderTestUtils.findLoadedFiles(entityManager);
           Assert.assertFalse(
               "Expect to not have old files",
-              afterFiles.stream().anyMatch(file -> file.getLastUpdated().before(oldDate)));
+              afterFiles.stream().anyMatch(file -> file.getCreated().before(oldDate)));
         });
   }
 
@@ -162,8 +159,8 @@ public final class RifLoaderIT {
           final List<LoadedFile> loadedFiles = RifLoaderTestUtils.findLoadedFiles(entityManager);
           Assert.assertTrue("Expected to have at least one file", loadedFiles.size() > 0);
           final LoadedFile file = loadedFiles.get(0);
-          final String[] benes = loadBeneficiaries(file);
-          Assert.assertTrue(benes.length > 0);
+          final List<LoadedBatch> batches = loadBatches(entityManager, file.getLoadedFileId());
+          Assert.assertTrue(batches.size() > 0);
         });
   }
 
@@ -522,19 +519,18 @@ public final class RifLoaderIT {
   }
 
   /**
-   * Get an array of beneficiary ids that was loaded
+   * Load the batches associated with a particular file
    *
-   * @param file that was loaded
+   * @param entityManager to use
+   * @param loadedFileId to use
    * @return array of ids
    */
-  private String[] loadBeneficiaries(LoadedFile file) {
-    try {
-      return FilterSerialization.deserialize(file.getFilterType(), file.getFilterBytes());
-    } catch (Exception ex) {
-      LOGGER.error("FilterSerialization Exception {}", ex.getMessage());
-      Assert.fail("Deserialize of loaded beneficiaries failed");
-      return null;
-    }
+  private List<LoadedBatch> loadBatches(EntityManager entityManager, long loadedFileId) {
+    CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+    CriteriaQuery<LoadedBatch> fetch = cb.createQuery(LoadedBatch.class);
+    Root<LoadedBatch> b = fetch.from(LoadedBatch.class);
+    fetch.where(cb.equal(b.get("loadedFileId"), loadedFileId));
+    return entityManager.createQuery(fetch).getResultList();
   }
 
   /**
