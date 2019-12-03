@@ -952,7 +952,6 @@ public final class PatientResourceProviderIT {
   /**
    * Verifies that {@link
    * gov.cms.bfd.server.war.stu3.providers.PatientResourceProvider#searchByIdentifier(ca.uhn.fhir.rest.param.TokenParam)}
-
    * works as expected for a {@link Patient} that does exist in the DB.
    */
   @Test
@@ -1503,11 +1502,25 @@ public final class PatientResourceProviderIT {
     Assert.assertEquals(0, searchResults.getTotal());
   }
 
- @Test
- public void searchWithLastUpdated() {
-   List<Object> loadedRecords =
-       ServerTestUtils.loadData(Arrays.asList(StaticRifResourceGroup.SAMPLE_A.getResources()));
-   IGenericClient fhirClient = ServerTestUtils.createFhirClient();
+  /**
+   * Verifies that {@link
+   * gov.cms.bfd.server.war.stu3.providers.PatientResourceProvider#searchByIdentifier(ca.uhn.fhir.rest.param.TokenParam)}
+   * works as expected for HICNs associated with {@link Beneficiary}s that have <strong>no</strong>
+   * {@link BeneficiaryHistory} records.
+   */
+  @Test
+  public void searchWithLastUpdated() {
+    List<Object> loadedRecords =
+        ServerTestUtils.loadData(Arrays.asList(StaticRifResourceGroup.SAMPLE_A.getResources()));
+    IGenericClient fhirClient = ServerTestUtils.createFhirClient();
+
+    Beneficiary beneficiary =
+        loadedRecords.stream()
+            .filter(r -> r instanceof Beneficiary)
+            .map(r -> (Beneficiary) r)
+            .findFirst()
+            .get();
+
     // Build up a list of lastUpdatedURLs that return > all values values
     String nowDateTime = new DateTimeDt(Date.from(Instant.now().plusSeconds(1))).getValueAsString();
     String earlyDateTime = "2019-10-01T00:00:00-04:00";

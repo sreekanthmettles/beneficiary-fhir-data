@@ -146,12 +146,6 @@ public final class RifLoaderIT {
   @Ignore
   @Test
   public void buildSynteticLoadedFiles() {
-    Assume.assumeTrue(
-        String.format(
-            "Not enough memory for this test (%s bytes max). Run with '-Xmx5g' or more.",
-            Runtime.getRuntime().maxMemory()),
-        Runtime.getRuntime().maxMemory() >= 4500000000L);
-
     RifLoaderTestUtils.doTestWithDb(
         (dataSource, entityManager) -> {
           loadSample(dataSource, StaticRifResourceGroup.SYNTHETIC_DATA);
@@ -214,7 +208,7 @@ public final class RifLoaderIT {
       Assert.assertEquals("John", beneficiaryFromDb.getNameGiven());
       Assert.assertEquals(new Character('A'), beneficiaryFromDb.getNameMiddleInitial().get());
       Assert.assertEquals(
-        "Beneficiary has MBI", Optional.of("SSSS"), beneficiaryFromDb.getMedicareBeneficiaryId());
+          "Beneficiary has MBI", Optional.of("SSSS"), beneficiaryFromDb.getMedicareBeneficiaryId());
       Assert.assertEquals(
           "Beneficiary has mbiHash",
           Optional.of("401441595efcc68bc5b26f4e88bd9fa550004e068d69ff75761ab946ec553a02"),
