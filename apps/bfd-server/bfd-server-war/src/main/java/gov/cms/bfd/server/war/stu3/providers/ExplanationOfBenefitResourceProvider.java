@@ -297,7 +297,7 @@ public final class ExplanationOfBenefitResourceProvider implements IResourceProv
   /**
    * @param claimType the {@link ClaimType} to find
    * @param patientId the {@link Beneficiary#getBeneficiaryId()} to filter by
-   * @param
+   * @param lastUpdated the update time to filter by
    * @return the matching claim/event entities
    */
   @SuppressWarnings({"rawtypes", "unchecked"})
