@@ -36,8 +36,8 @@ public final class RifLoaderTestUtils {
   public static final boolean IDEMPOTENCY_REQUIRED = true;
 
   /** The value to use for {@link LoadAppOptions#isFixupsEnabled()} */
-  public static final boolean FIXUPS_ENABLED = false;
-  
+  public static final boolean FIXUPS_ENABLED = true;
+
   @SuppressWarnings("unused")
   private static final Logger LOGGER = LoggerFactory.getLogger(RifLoaderTestUtils.class);
 

@@ -457,25 +457,25 @@ public final class RifLoaderIT {
     LoadAppOptions options = RifLoaderTestUtils.getLoadOptions(dataSource);
     AtomicInteger failureCount = new AtomicInteger(0);
     AtomicInteger loadCount = new AtomicInteger(0);
-    try (RifLoader loader = new RifLoader(appMetrics, options)) {
-      // Link up the pipeline and run it.
-      LOGGER.info("Loading RIF records...");
-      for (RifFileEvent rifFileEvent : rifFilesEvent.getFileEvents()) {
-        RifFileRecords rifFileRecords = processor.produceRecords(rifFileEvent);
-        loader.process(
-            rifFileRecords,
-            error -> {
-              failureCount.incrementAndGet();
-              LOGGER.error("Record(s) failed to load.", error);
-            },
-            result -> {
-              loadCount.incrementAndGet();
-            });
-        Slf4jReporter.forRegistry(rifFileEvent.getEventMetrics()).outputTo(LOGGER).build().report();
-      }
-      LOGGER.info("Loaded RIF records: '{}'.", loadCount.get());
-      Slf4jReporter.forRegistry(appMetrics).outputTo(LOGGER).build().report();
+    RifLoader loader = new RifLoader(appMetrics, options);
+
+    // Link up the pipeline and run it.
+    LOGGER.info("Loading RIF records...");
+    for (RifFileEvent rifFileEvent : rifFilesEvent.getFileEvents()) {
+      RifFileRecords rifFileRecords = processor.produceRecords(rifFileEvent);
+      loader.process(
+          rifFileRecords,
+          error -> {
+            failureCount.incrementAndGet();
+            LOGGER.error("Record(s) failed to load.", error);
+          },
+          result -> {
+            loadCount.incrementAndGet();
+          });
+      Slf4jReporter.forRegistry(rifFileEvent.getEventMetrics()).outputTo(LOGGER).build().report();
     }
+    LOGGER.info("Loaded RIF records: '{}'.", loadCount.get());
+    Slf4jReporter.forRegistry(appMetrics).outputTo(LOGGER).build().report();
 
     // Verify that the expected number of records were run successfully.
     Assert.assertEquals(0, failureCount.get());

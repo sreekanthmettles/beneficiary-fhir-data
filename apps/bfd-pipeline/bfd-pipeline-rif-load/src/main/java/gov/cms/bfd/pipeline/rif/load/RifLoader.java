@@ -33,7 +33,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
+import java.time.Period;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -88,7 +88,7 @@ public final class RifLoader implements AutoCloseable {
    */
   private static final int RECORD_BATCH_SIZE = 100;
 
-  private static final int MAX_FILE_AGE = 40; // Days
+  private static final Period MAX_FILE_AGE_DAYS = Period.ofDays(40);
 
   private static final Logger LOGGER = LoggerFactory.getLogger(RifLoader.class);
   private static final Logger LOGGER_RECORD_COUNTS =
@@ -671,7 +671,7 @@ public final class RifLoader implements AutoCloseable {
       try {
         txn = em.getTransaction();
         txn.begin();
-        final Date oldDate = Date.from(Instant.now().minus(MAX_FILE_AGE, ChronoUnit.DAYS));
+        final Date oldDate = Date.from(Instant.now().minus(MAX_FILE_AGE_DAYS));
 
         final CriteriaBuilder cb = em.getCriteriaBuilder();
         final CriteriaQuery<LoadedFile> oldFileCriteria = cb.createQuery(LoadedFile.class);
