@@ -1,11 +1,12 @@
 package gov.cms.bfd.model.rif;
 
+import java.util.ArrayList;
 import java.util.Date;
-import java.util.Vector;
+import java.util.List;
 
 /** Class to build a LoadedBatch. Thread safe. */
 public class LoadedBatchBuilder {
-  private final Vector<String> beneficiaries;
+  private final List<String> beneficiaries;
   private final long loadedFileId;
 
   /**
@@ -16,7 +17,7 @@ public class LoadedBatchBuilder {
    */
   public LoadedBatchBuilder(long loadedFileId, int capacityIncrement) {
     this.loadedFileId = loadedFileId;
-    this.beneficiaries = new Vector<>(capacityIncrement, capacityIncrement);
+    this.beneficiaries = new ArrayList<>(capacityIncrement);
   }
 
   /**
@@ -24,7 +25,7 @@ public class LoadedBatchBuilder {
    *
    * @param beneficiaryId to put in the filter
    */
-  public void associateBeneficiary(String beneficiaryId) {
+  public synchronized void associateBeneficiary(String beneficiaryId) {
     if (beneficiaryId == null || beneficiaryId.isEmpty()) {
       throw new IllegalArgumentException("Null or empty beneficiary");
     }
@@ -36,13 +37,11 @@ public class LoadedBatchBuilder {
    *
    * @return a new LoadedBatch
    */
-  public LoadedBatch build() {
-    synchronized (this) {
-      final LoadedBatch loadedBatch = new LoadedBatch();
-      loadedBatch.setLoadedFileId(loadedFileId);
-      loadedBatch.setBeneficiaries(beneficiaries);
-      loadedBatch.setCreated(new Date());
-      return loadedBatch;
-    }
+  public synchronized LoadedBatch build() {
+    final LoadedBatch loadedBatch = new LoadedBatch();
+    loadedBatch.setLoadedFileId(loadedFileId);
+    loadedBatch.setBeneficiaries(beneficiaries);
+    loadedBatch.setCreated(new Date());
+    return loadedBatch;
   }
 }
