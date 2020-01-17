@@ -62,7 +62,7 @@ public class RifLoaderIdleTasks {
   private static final Duration TIME_SLICE_LIMIT = Duration.ofMillis(TIME_SLICE_LIMIT_MILLIS);
 
   /** Max amount of time before a timeout occurs. */
-  private static final int MAX_EXECUTOR_TIME_SECONDS = 300; // Allow for large table scans
+  private static final int MAX_EXECUTOR_TIME_SECONDS = 580; // Allow for large table scans
 
   /** The record count of a db update batch */
   private static final int BATCH_COUNT = 100;
@@ -401,13 +401,18 @@ public class RifLoaderIdleTasks {
             + "\" b "
             + "WHERE b.\"mbiHash\" IS NULL AND b.\"medicareBeneficiaryId\" IS NOT NULL AND "
             + (hasTextId
-                ? "MOD(CAST(b.\""
+                ? "MOD(ABS(CAST(b.\""
                     + idName
-                    + "\" AS numeric), "
+                    + "\" AS numeric)), "
                     + options.getFixupThreads()
                     + ") = "
                     + partition
-                : "MOD(b.\"" + idName + "\", " + options.getFixupThreads() + ") = " + partition);
+                : "MOD(ABS(b.\""
+                    + idName
+                    + "\"), "
+                    + options.getFixupThreads()
+                    + ") = "
+                    + partition);
 
     return session.createNativeQuery(select).setMaxResults(BATCH_COUNT).getResultList();
   }
