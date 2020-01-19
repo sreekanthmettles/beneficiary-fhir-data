@@ -1490,7 +1490,7 @@ public final class ExplanationOfBenefitResourceProviderIT {
 
   /** Verifys that a search with a lastUpdated with eq param works */
   @Test
-  public void searchEobWithEq() throws FHIRException {
+  public void searchEobWithLastUpdatedEq() throws FHIRException {
     Beneficiary beneficiary = loadSampleA();
     String beneId = beneficiary.getBeneficiaryId();
     IGenericClient fhirClient = ServerTestUtils.createFhirClient();
@@ -1505,7 +1505,7 @@ public final class ExplanationOfBenefitResourceProviderIT {
     DateTimeDt fhirTestMillis = new DateTimeDt(testDate, TemporalPrecisionEnum.MILLI);
     String lastUpdatedEq = "_lastUpdated=eq" + fhirTestMillis.getValueAsString();
     Bundle eobsWithTime = fetchWithLastUpdated(fhirClient, beneId, lastUpdatedEq);
-    Assert.assertTrue("Expected to hava at least one match", eobsWithTime.getEntry().size() > 0);
+    Assert.assertTrue("Expected to have at least one match", eobsWithTime.getEntry().size() > 0);
 
     // Test that each retrived match the testDate with second percision
     eobsWithTime.getEntry().stream()
