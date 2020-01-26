@@ -9,6 +9,10 @@ locals {
   port              = 7443
   cw_period         = 60    # Seconds
   cw_eval_periods   = 3
+  parent_domain     = "bfdcloud.net"
+  sub_domains       = ["bb", "mct", "dpc", "bcda"]
+  domain            = "${local.env_config.env}.${local.parent_domain}"
+
 
   # Add new peerings here
   vpc_peerings_by_env = {
@@ -62,6 +66,10 @@ data "aws_vpc_peering_connection" "peers" {
 data "aws_route53_zone" "local_zone" {
   name          = "bfd-${var.env_config.env}.local"
   private_zone  = true
+}
+
+data "aws_route53_zone" "parent" {
+  name = local.parent_domain
 }
 
 # S3 Buckets
@@ -161,6 +169,29 @@ module "fhir_iam" {
 resource "aws_iam_role_policy_attachment" "fhir_iam_ansible_vault_pw_ro_s3" {
   role            = module.fhir_iam.role
   policy_arn      = data.aws_iam_policy.ansible_vault_pw_ro_s3.arn
+}
+
+# DNS zone and records
+#
+module "zone_record" {
+  source          = "../resources/dns"
+  name            = local.env_config.env
+  parent          = {name=data.aws_route53_zone.parent.name, zone_id=data.aws_route53_zone.parent.zone_id}
+  public          = true
+  env_config      = local.env_config
+
+  # The apex record just goes the FHIR server
+  apex_record = {
+    alias         = module.fhir_lb.dns_name
+    zone_id       = module.fhir_lb.zone_id
+  }
+
+  # The health-apt record goes to the health apt service
+  a_records   = [for sub in local.sub_domains : {
+    name      = sub
+    alias     = module.fhir_lb.dns_name
+    zone_id   = module.fhir_lb.zone_id
+  }]
 }
 
 # NLB for the FHIR server (SSL terminated by the FHIR server)
