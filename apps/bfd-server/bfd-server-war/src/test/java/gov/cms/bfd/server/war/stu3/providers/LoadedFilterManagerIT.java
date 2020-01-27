@@ -42,6 +42,9 @@ public final class LoadedFilterManagerIT {
           // Without a refresh, the manager should have an empty filter list
           final List<LoadedFileFilter> beforeFilters = filterManager.getFilters();
           Assert.assertEquals(0, beforeFilters.size());
+          Assert.assertEquals(0, filterManager.getMaxBatchId());
+          Assert.assertEquals(0, filterManager.getMinBatchId());
+          Assert.assertEquals(0, filterManager.getReplicaDelay());
 
           // Refresh the filter list
           filterManager.refreshFilters();
@@ -51,6 +54,9 @@ public final class LoadedFilterManagerIT {
           final List<LoadedFileFilter> afterFilters = filterManager.getFilters();
           Assert.assertTrue(filterManager.getKnownLowerBound().getTime() <= afterLoad.getTime());
           Assert.assertTrue(filterManager.getKnownUpperBound().getTime() <= afterRefresh.getTime());
+          Assert.assertTrue(filterManager.getMaxBatchId() > 0);
+          Assert.assertTrue(filterManager.getMinBatchId() > 0);
+          Assert.assertTrue(filterManager.getMinBatchId() <= filterManager.getMaxBatchId());
           Assert.assertTrue(afterFilters.size() > 1);
         });
   }

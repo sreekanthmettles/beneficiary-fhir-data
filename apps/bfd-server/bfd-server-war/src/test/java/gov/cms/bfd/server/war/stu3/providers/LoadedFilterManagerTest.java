@@ -6,7 +6,6 @@ import gov.cms.bfd.model.rif.LoadedFile;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -38,7 +37,7 @@ public final class LoadedFilterManagerTest {
     for (int i = 0; i < preDates.length; i++) {
       preDates[i] = Date.from(now.plusSeconds(i));
     }
-    List<String> beneficiaries = Arrays.asList(SAMPLE_BENE);
+    List<String> beneficiaries = Collections.singletonList(SAMPLE_BENE);
     for (int i = 0; i < preBatches.length; i++) {
       preBatches[i] = new LoadedBatch(i + 1, (i / 2) + 1, beneficiaries, preDates[i * 5 + 4]);
     }
@@ -91,7 +90,7 @@ public final class LoadedFilterManagerTest {
             .insert(preBatches[0], preBatches[2], preBatches[4]);
     final List<LoadedFileFilter> filters1 =
         LoadedFilterManager.updateFilters(
-            Arrays.asList(), mockDb1.fetchAllTuples(), mockDb1::fetchById);
+            Collections.emptyList(), mockDb1.fetchAllTuples(), mockDb1::fetchById);
     Assert.assertEquals(3, filters1.size());
     Assert.assertEquals(1, filters1.get(2).getLoadedFileId());
     Assert.assertEquals(1, filters1.get(2).getBatchesCount());
@@ -113,8 +112,8 @@ public final class LoadedFilterManagerTest {
 
   @Test
   public void calcBoundsWithInitial() {
-    final Date upper = LoadedFilterManager.calcUpperBound(Arrays.asList(), preDates[7]);
-    final Date lower = LoadedFilterManager.calcLowerBound(Arrays.asList(), upper);
+    final Date upper = LoadedFilterManager.calcUpperBound(Collections.emptyList(), preDates[7]);
+    final Date lower = LoadedFilterManager.calcLowerBound(Collections.emptyList(), upper);
 
     Assert.assertEquals(preDates[7], upper);
     Assert.assertEquals(preDates[7], lower);
@@ -277,17 +276,17 @@ public final class LoadedFilterManagerTest {
 
     // Trim the loadedFiles
     List<LoadedFile> files = mockDb.fetchAllFiles();
-    Assert.assertEquals(1l, files.get(0).getLoadedFileId());
+    Assert.assertEquals(1L, files.get(0).getLoadedFileId());
     files.remove(0);
 
     // Trim the map and test results. Should have the filter for
     final List<LoadedFileFilter> bFilters = LoadedFilterManager.trimFilters(aFilters, files);
     Assert.assertEquals(1, bFilters.size());
-    Assert.assertTrue(bFilters.get(0) == aFilters.get(0));
+    Assert.assertSame(bFilters.get(0), aFilters.get(0));
   }
 
   /** Helper class that mocks a DB for LoadedFilterManager testing */
-  private class MockDb {
+  private static class MockDb {
     private final ArrayList<LoadedBatch> mockDb = new ArrayList<>();
     private final ArrayList<LoadedFile> files = new ArrayList<>();
 
@@ -321,7 +320,7 @@ public final class LoadedFilterManagerTest {
             Optional<Date> lastUpdated =
                 mockDb.stream()
                     .filter(b -> b.getLoadedFileId() == file.getLoadedFileId())
-                    .map(b -> b.getCreated())
+                    .map(LoadedBatch::getCreated)
                     .reduce((a, b) -> a.after(b) ? a : b);
             lastUpdated.ifPresent(
                 updated ->

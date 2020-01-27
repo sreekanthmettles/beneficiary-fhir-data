@@ -3,10 +3,10 @@ package gov.cms.bfd.server.war.stu3.providers;
 import ca.uhn.fhir.rest.param.DateParam;
 import ca.uhn.fhir.rest.param.DateRangeParam;
 import ca.uhn.fhir.rest.param.ParamPrefixEnum;
-import com.google.common.hash.BloomFilter;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import org.apache.spark.util.sketch.BloomFilter;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -15,7 +15,7 @@ public final class LoadedFilterTest {
 
   @Test
   public void testMatchesDateRange() {
-    final BloomFilter<String> emptyFilter = LoadedFileFilter.createFilter(10);
+    final BloomFilter emptyFilter = LoadedFileFilter.createFilter(10);
     final LoadedFileFilter filter1 =
         new LoadedFileFilter(
             1,
@@ -83,10 +83,10 @@ public final class LoadedFilterTest {
   @Test
   public void testMightContain() {
     // Very small test on the Guava implementation of BloomFilters. Assume this package works.
-    final BloomFilter<String> smallFilter = LoadedFileFilter.createFilter(10);
-    smallFilter.put("1");
-    smallFilter.put("100");
-    smallFilter.put("100");
+    final BloomFilter smallFilter = LoadedFileFilter.createFilter(10);
+    smallFilter.putString("1");
+    smallFilter.putString("100");
+    smallFilter.putString("100");
 
     final LoadedFileFilter filter1 =
         new LoadedFileFilter(

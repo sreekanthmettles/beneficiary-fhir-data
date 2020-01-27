@@ -2,10 +2,8 @@ package gov.cms.bfd.server.war.stu3.providers;
 
 import ca.uhn.fhir.rest.param.DateParam;
 import ca.uhn.fhir.rest.param.DateRangeParam;
-import com.google.common.base.Charsets;
-import com.google.common.hash.BloomFilter;
-import com.google.common.hash.Funnels;
 import java.util.Date;
+import org.apache.spark.util.sketch.BloomFilter;
 
 /**
  * LoadedFile filters are used to determine if a given beneficiary was updated in particular loaded
@@ -26,7 +24,7 @@ public class LoadedFileFilter {
   private final Date lastUpdated;
 
   // The beneficiaries that were updated in the RIF load
-  private final BloomFilter<String> updatedBeneficiaries;
+  private final BloomFilter updatedBeneficiaries;
 
   /**
    * Build a filter for a LoadedFile
@@ -42,7 +40,7 @@ public class LoadedFileFilter {
       int batchesCount,
       Date firstUpdated,
       Date lastUpdated,
-      BloomFilter<String> updatedBeneficiaries) {
+      BloomFilter updatedBeneficiaries) {
     this.loadedFileId = loadedFileId;
     this.batchesCount = batchesCount;
     this.firstUpdated = firstUpdated;
@@ -115,11 +113,7 @@ public class LoadedFileFilter {
    * @return true if the filter may contain the beneficiary
    */
   public boolean mightContain(String beneficiaryId) {
-    try {
-      return updatedBeneficiaries.mightContain(beneficiaryId);
-    } catch (NumberFormatException ex) {
-      return false;
-    }
+    return updatedBeneficiaries.mightContain(beneficiaryId);
   }
 
   /** @return the fileId */
@@ -138,7 +132,7 @@ public class LoadedFileFilter {
   }
 
   /** @return the updatedBeneficiaries */
-  public BloomFilter<String> getUpdatedBeneficiaries() {
+  public BloomFilter getUpdatedBeneficiaries() {
     return updatedBeneficiaries;
   }
 
@@ -148,9 +142,8 @@ public class LoadedFileFilter {
    * @param count to allocate
    * @return a new BloomFilter
    */
-  public static BloomFilter<String> createFilter(int count) {
-    return BloomFilter.create(
-        Funnels.stringFunnel(Charsets.UTF_8), count, FALSE_POSITIVE_PERCENTAGE);
+  public static BloomFilter createFilter(int count) {
+    return BloomFilter.create(count, FALSE_POSITIVE_PERCENTAGE);
   }
 
   public int getBatchesCount() {
