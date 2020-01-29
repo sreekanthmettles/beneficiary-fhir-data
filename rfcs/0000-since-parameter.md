@@ -54,7 +54,10 @@ The first improvement is to add the `lastUpdated` field to the metadata object o
 
 The second change is to support the `_lastUpdated` query parameter for resource searches per the FHIR specification \[[5](#ref5)\]. FHIR specifies a set of comparison operators to go along with this filter. BFD supports the `eq`, `lt`, `le`, `gt` and `ge` operators. Two `_lastUpdated` parameters can be specified to form the upper and lower bounds of a time interval. 
 
-Many records in the BFD database where loaded before this RFC and have a null `lastUpdated` field. The BFD treats these records as if they have an early `lastUpdated` value. Searches with a `_lastUpdated` parameter without a lower bound match these records; Likewise, searches with a lower bound never match these records. This design allows a single query to retrieve both records with and without a `lastUpdate`. 
+Many records in the BFD database have a null `lastUpdated` field. 
+The BFD treats these records as if they have an early `lastUpdated` value. 
+Searches with a `_lastUpdated` parameter without a lower bound match these records; Likewise, searches with a lower bound never match these records. 
+This design allows a single query to retrieve both records with and without a `lastUpdate`. 
 
 ### Bulk Export Implementors Details
 
