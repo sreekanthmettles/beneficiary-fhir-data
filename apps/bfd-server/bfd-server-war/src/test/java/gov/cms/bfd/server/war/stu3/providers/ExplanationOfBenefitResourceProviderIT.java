@@ -49,12 +49,17 @@ import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Integration tests for {@link
  * gov.cms.bfd.server.war.stu3.providers.ExplanationOfBenefitResourceProvider}.
  */
 public final class ExplanationOfBenefitResourceProviderIT {
+  private static final Logger LOGGER =
+      LoggerFactory.getLogger(ExplanationOfBenefitResourceProviderIT.class);
+
   /**
    * Verifies that {@link
    * gov.cms.bfd.server.war.stu3.providers.ExplanationOfBenefitResourceProvider#read(org.hl7.fhir.dstu3.model.IdType)}
@@ -1488,7 +1493,7 @@ public final class ExplanationOfBenefitResourceProviderIT {
     testLastUpdatedUrls(fhirClient, beneficiary.getBeneficiaryId(), emptyUrls, 0);
   }
 
-  /** Verifys that a search with a lastUpdated with eq param works */
+  /** Verifies that a search with a lastUpdated with eq param works */
   @Test
   public void searchEobWithLastUpdatedEq() throws FHIRException {
     Beneficiary beneficiary = loadSampleA();
@@ -1561,6 +1566,60 @@ public final class ExplanationOfBenefitResourceProviderIT {
         nextResults.getEntry().size());
   }
 
+  @Test
+  public void searchEobWithNullLastUpdated() throws FHIRException {
+    // Load a records and clear the lastUpdated field for one
+    List<Object> loadedRecords =
+        ServerTestUtils.loadData(Arrays.asList(StaticRifResourceGroup.SAMPLE_A.getResources()));
+    String claimId = findFirstCarrierClaim(loadedRecords).getClaimId();
+    String beneId = findFirstBeneficary(loadedRecords).getBeneficiaryId();
+    clearCarrierClaimLastUpdated(claimId);
+
+    // Find all EOBs without lastUpdated
+    IGenericClient fhirClient = ServerTestUtils.createFhirClient();
+    Bundle searchAll =
+        fhirClient
+            .search()
+            .forResource(ExplanationOfBenefit.class)
+            .where(ExplanationOfBenefit.PATIENT.hasId(TransformerUtils.buildPatientId(beneId)))
+            .returnBundle(Bundle.class)
+            .execute();
+    Assert.assertNull(
+        filterToClaimType(searchAll, ClaimType.CARRIER).get(0).getMeta().getLastUpdated());
+
+    // Find all EOBs with < now()
+    Bundle searchWithLessThan =
+        fhirClient
+            .search()
+            .forResource(ExplanationOfBenefit.class)
+            .where(ExplanationOfBenefit.PATIENT.hasId(TransformerUtils.buildPatientId(beneId)))
+            .lastUpdated(new DateRangeParam().setUpperBoundInclusive(new Date()))
+            .returnBundle(Bundle.class)
+            .execute();
+    Assert.assertNull(
+        filterToClaimType(searchWithLessThan, ClaimType.CARRIER).get(0).getMeta().getLastUpdated());
+    Assert.assertEquals(
+        "Expected the search for lastUpdated <= now() to include null lastUpdated resources",
+        searchAll.getTotal(),
+        searchWithLessThan.getTotal());
+
+    // Find all EOBs with >= now()-100 seconds
+    Bundle searchWithGreaterThan =
+        fhirClient
+            .search()
+            .forResource(ExplanationOfBenefit.class)
+            .where(ExplanationOfBenefit.PATIENT.hasId(TransformerUtils.buildPatientId(beneId)))
+            .lastUpdated(
+                new DateRangeParam()
+                    .setLowerBoundInclusive(Date.from(Instant.now().minusSeconds(100))))
+            .returnBundle(Bundle.class)
+            .execute();
+    Assert.assertEquals(
+        "Expected the search for lastUpdated >= now()-100 to not include null lastUpdated resources",
+        searchAll.getTotal() - 1,
+        searchWithGreaterThan.getTotal());
+  }
+
   /** Ensures that {@link ServerTestUtils#cleanDatabaseServer()} is called after each test case. */
   @After
   public void cleanDatabaseServerAfterEachTestCase() {
@@ -1629,15 +1688,44 @@ public final class ExplanationOfBenefitResourceProviderIT {
     }
   }
 
+  /**
+   * Load Sample A into the test database
+   *
+   * @return the beneficary record loaded by Sample A
+   */
   private Beneficiary loadSampleA() {
     List<Object> loadedRecords =
         ServerTestUtils.loadData(Arrays.asList(StaticRifResourceGroup.SAMPLE_A.getResources()));
-    ;
 
     // Return beneficiary information
+    return findFirstBeneficary(loadedRecords);
+  }
+
+  /**
+   * Find the first Beneficiary from a record list returned by {@link ServerTestUtils#loadData(List}
+   *
+   * @param loadedRecords to use
+   * @return the first Beneficiary
+   */
+  private static Beneficiary findFirstBeneficary(List<Object> loadedRecords) {
     return loadedRecords.stream()
         .filter(r -> r instanceof Beneficiary)
         .map(r -> (Beneficiary) r)
+        .findFirst()
+        .get();
+  }
+
+  /**
+   * Find the first CarrierClaim from a record list returned by {@link
+   * ServerTestUtils#loadData(List}
+   *
+   * @param loadedRecords to use
+   * @return the first CarrierClaim in the records
+   */
+  private static CarrierClaim findFirstCarrierClaim(List<Object> loadedRecords) {
+    return loadedRecords.stream()
+        .filter(r -> r instanceof CarrierClaim)
+        .map(r -> (CarrierClaim) r)
         .findFirst()
         .get();
   }
@@ -1657,5 +1745,19 @@ public final class ExplanationOfBenefitResourceProviderIT {
             + (lastUpdatedParam.isEmpty() ? "" : "&" + lastUpdatedParam)
             + "&_format=application%2Fjson%2Bfhir";
     return fhirClient.search().byUrl(url).returnBundle(Bundle.class).execute();
+  }
+
+  /**
+   * To setup a database, clear the lastUpdated of passed in claim
+   *
+   * @param claimId to use
+   */
+  private void clearCarrierClaimLastUpdated(String claimId) {
+    ServerTestUtils.doTransaction(
+        (em) -> {
+          em.createQuery("update CarrierClaim set lastUpdated=null where claimId=:claimId")
+              .setParameter("claimId", claimId)
+              .executeUpdate();
+        });
   }
 }

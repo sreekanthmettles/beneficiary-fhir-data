@@ -155,7 +155,8 @@ public class LoadedFilterManager {
   }
 
   /**
-   * Is the result set going to be empty for this beneficiary and time period?
+   * Is the result set going to be empty for this beneficiary and time period? Will return false
+   * negatives, never false positives.
    *
    * @param beneficiaryId to test
    * @param lastUpdatedRange to test
@@ -211,7 +212,6 @@ public class LoadedFilterManager {
      * time will be proportional to the number of files which have been loaded in the past refresh
      * period. If no files have been loaded, this refresh should take about a millisecond.
      */
-
     try {
       // If new batches are present, then build new filters for the affected files
       final long updatedMaxBatchId = getMaxLoadedBatchId();
@@ -234,6 +234,7 @@ public class LoadedFilterManager {
         final Date refreshTime = Date.from(Instant.now().minusSeconds(replicaDelay));
         this.knownUpperBound = calcUpperBound(loadedTuples, refreshTime);
         this.maxBatchId = updatedMaxBatchId;
+        LOGGER.info("Refreshed LoadedFile filters till batchId {}", this.maxBatchId);
       }
 
       // If batches been trimmed, then remove filters which are no longer present
@@ -243,6 +244,7 @@ public class LoadedFilterManager {
         this.filters = trimFilters(this.filters, loadedFiles);
         this.knownLowerBound = calcLowerBound(loadedFiles, this.knownLowerBound);
         this.minBatchId = updatedMinBatchId;
+        LOGGER.info("Trimmed LoadedFile filters before batchId {}", this.minBatchId);
       }
     } catch (Exception ex) {
       LOGGER.error("Error found refreshing LoadedFile filters", ex);

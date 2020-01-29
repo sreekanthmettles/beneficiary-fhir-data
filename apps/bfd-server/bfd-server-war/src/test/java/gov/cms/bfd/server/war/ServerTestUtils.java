@@ -39,6 +39,7 @@ import java.util.Properties;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import javax.management.MBeanServer;
 import javax.net.ssl.SSLContext;
@@ -252,8 +253,33 @@ public final class ServerTestUtils {
               recordsLoaded.add(result.getRifRecordEvent().getRecord());
             });
       }
-      LOGGER.info("Loaded RIF records: '{}'.");
+      LOGGER.info("Loaded RIF records: '{}'.", recordsLoaded.size());
       return recordsLoaded;
+    }
+  }
+
+  /**
+   * A wrapper for the entity manager logic and action. The executor is called within a transaction
+   *
+   * @param executor to call with an entity manager.
+   */
+  public static void doTransaction(Consumer<EntityManager> executor) {
+    final EntityManagerFactory entityManagerFactory = createEntityManagerFactory();
+    EntityManager em = null;
+    EntityTransaction tx = null;
+    try {
+      em = entityManagerFactory.createEntityManager();
+      tx = em.getTransaction();
+      tx.begin();
+      executor.accept(em);
+      tx.commit();
+    } finally {
+      if (tx != null && tx.isActive()) {
+        tx.rollback();
+        LOGGER.info("Rolling back a transaction");
+      }
+      if (em != null && em.isOpen()) em.close();
+      if (entityManagerFactory != null) entityManagerFactory.close();
     }
   }
 

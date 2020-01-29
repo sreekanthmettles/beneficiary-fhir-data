@@ -2,8 +2,8 @@ package gov.cms.bfd.server.war.stu3.providers;
 
 import ca.uhn.fhir.rest.param.DateRangeParam;
 import ca.uhn.fhir.rest.param.ParamPrefixEnum;
-import java.time.Instant;
 import java.util.Date;
+import java.util.Optional;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.Path;
 import javax.persistence.criteria.Predicate;
@@ -19,21 +19,20 @@ public class QueryUtils {
    * @param range to base the predicate on
    * @return a predicate on the lastUpdated field
    */
-  @SuppressWarnings({"rawtypes", "unchecked"})
   static Predicate createLastUpdatedPredicate(
-      CriteriaBuilder criteriaBuilder, Root root, DateRangeParam range) {
+      CriteriaBuilder criteriaBuilder, Root<?> root, DateRangeParam range) {
     final Date lowerBound = range.getLowerBoundAsInstant();
     final Date upperBound = range.getUpperBoundAsInstant();
-    final Path lastUpdatedPath = root.get("lastUpdated");
+    final Path<Date> lastUpdatedPath = root.get("lastUpdated");
 
     Predicate lowerBoundPredicate = null;
     if (lowerBound != null) {
       switch (range.getLowerBound().getPrefix()) {
-        case GREATERTHAN:
-          lowerBoundPredicate = criteriaBuilder.greaterThan(lastUpdatedPath, lowerBound);
-          break;
         case EQUAL:
           lowerBoundPredicate = criteriaBuilder.greaterThanOrEqualTo(lastUpdatedPath, lowerBound);
+          break;
+        case GREATERTHAN:
+          lowerBoundPredicate = criteriaBuilder.greaterThan(lastUpdatedPath, lowerBound);
           break;
         case GREATERTHAN_OR_EQUALS:
           lowerBoundPredicate = criteriaBuilder.greaterThanOrEqualTo(lastUpdatedPath, lowerBound);
@@ -45,7 +44,7 @@ public class QueryUtils {
         case LESSTHAN_OR_EQUALS:
         case NOT_EQUAL:
         default:
-          throw new IllegalArgumentException("_lastUpdate lower bound has invalid prefix");
+          throw new IllegalArgumentException("_lastUpdate lower bound has an invalid prefix");
       }
     }
 
@@ -73,24 +72,23 @@ public class QueryUtils {
         case GREATERTHAN_OR_EQUALS:
         case NOT_EQUAL:
         default:
-          throw new IllegalArgumentException("_lastUpdate upper bound has invalid prefix");
+          throw new IllegalArgumentException("_lastUpdate upper bound has an invalid prefix");
       }
     }
 
     // Form an interval predicate form upper and lower bound predicates
-    Predicate intervalPredicate = null;
+    Predicate predicate;
     if (lowerBoundPredicate != null && upperBoundPredicate != null) {
-      intervalPredicate = criteriaBuilder.and(lowerBoundPredicate, upperBoundPredicate);
+      predicate = criteriaBuilder.and(lowerBoundPredicate, upperBoundPredicate);
     } else if (lowerBoundPredicate != null) {
-      intervalPredicate = lowerBoundPredicate;
+      predicate = lowerBoundPredicate;
     } else if (upperBoundPredicate != null) {
-      intervalPredicate = upperBoundPredicate;
+      // the unbounded _lastUpdated < <any date> expression should match all null lastUpdated rows
+      predicate = criteriaBuilder.or(upperBoundPredicate, criteriaBuilder.isNull(lastUpdatedPath));
     } else {
-      // must be an empty range, shouldn't happen, but just return an everything predicate
-      intervalPredicate =
-          criteriaBuilder.greaterThanOrEqualTo(lastUpdatedPath, Date.from(Instant.MIN));
+      throw new RuntimeException("Should of not reach here; Null or empty lastUpdated");
     }
-    return intervalPredicate;
+    return predicate;
   }
 
   /**
@@ -101,15 +99,23 @@ public class QueryUtils {
    * @return true iff within the range specified
    */
   static boolean isInRange(Date lastUpdated, DateRangeParam range) {
-    if (range == null || range.isEmpty() || lastUpdated == null) {
+    if (range == null || range.isEmpty()) {
       return true;
     }
-    final Date lowerBound = range.getLowerBoundAsInstant();
-    final Date upperBound = range.getUpperBoundAsInstant();
-    final long lastUpdatedMillis = lastUpdated.getTime();
+    if (lastUpdated == null) {
+      // the unbounded _lastUpdated < <any date> expression should match all null lastUpdated rows
+      if (range.getLowerBound() != null) return false;
+      return Optional.ofNullable(range.getUpperBound())
+          .map(
+              upperBound ->
+                  upperBound.getPrefix() == ParamPrefixEnum.LESSTHAN
+                      || upperBound.getPrefix() == ParamPrefixEnum.LESSTHAN_OR_EQUALS)
+          .orElse(false);
+    }
 
-    if (lowerBound != null) {
-      final long lowerBoundMillis = lowerBound.getTime();
+    final long lastUpdatedMillis = lastUpdated.getTime();
+    if (range.getLowerBound() != null) {
+      final long lowerBoundMillis = range.getLowerBoundAsInstant().getTime();
       switch (range.getLowerBound().getPrefix()) {
         case GREATERTHAN:
           if (lastUpdatedMillis <= lowerBoundMillis) {
@@ -126,12 +132,12 @@ public class QueryUtils {
           }
           break;
         default:
-          throw new IllegalArgumentException("_lastUpdate lower bound has invalid prefix");
+          throw new IllegalArgumentException("_lastUpdate lower bound has an invalid prefix");
       }
     }
 
-    if (upperBound != null) {
-      final long upperBoundMillis = upperBound.getTime();
+    if (range.getUpperBound() != null) {
+      final long upperBoundMillis = range.getUpperBoundAsInstant().getTime();
       switch (range.getUpperBound().getPrefix()) {
         case EQUAL:
           if (range.getLowerBound().getPrefix() == ParamPrefixEnum.EQUAL) {
@@ -154,7 +160,7 @@ public class QueryUtils {
           }
           break;
         default:
-          throw new IllegalArgumentException("_lastUpdate upper bound has invalid prefix");
+          throw new IllegalArgumentException("_lastUpdate upper bound has an invalid prefix");
       }
     }
     return true;

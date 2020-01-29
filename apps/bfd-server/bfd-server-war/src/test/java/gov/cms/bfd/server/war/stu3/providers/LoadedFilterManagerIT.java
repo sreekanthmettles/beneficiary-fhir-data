@@ -68,28 +68,47 @@ public final class LoadedFilterManagerIT {
         (dataSource, entityManager) -> {
           final LoadedFilterManager filterManager = new LoadedFilterManager(0);
           filterManager.setEntityManager(entityManager);
+
+          // Establish a before load time
+          final Date beforeLoad = new Date();
+          final DateRangeParam beforeLoadUnbounded =
+              new DateRangeParam().setUpperBoundExclusive(beforeLoad);
+          RifLoaderTestUtils.pauseMillis(10);
+
           loadData(dataSource, Arrays.asList(StaticRifResourceGroup.SAMPLE_A.getResources()));
 
-          // Establish a couple of times
-          RifLoaderTestUtils.pauseMillis(1000);
-          final Date afterSampleA = new Date();
+          // Establish a time after load but before refresh
           RifLoaderTestUtils.pauseMillis(10);
-          final Date afterSampleAPlus = new Date();
-          final DateRangeParam afterSampleARange =
-              new DateRangeParam(afterSampleA, afterSampleAPlus);
+          final Date beforeRefresh = new Date();
+          final DateRangeParam beforeRefreshRange =
+              new DateRangeParam(beforeRefresh, Date.from(Instant.now().plusMillis(5)));
+          RifLoaderTestUtils.pauseMillis(10);
 
-          // Refresh the filter list
-          RifLoaderTestUtils.pauseMillis(10);
           filterManager.refreshFilters();
 
-          // Test after refresh
-          Assert.assertTrue(filterManager.isInKnownBounds(afterSampleARange));
+          // Establish a after refresh time
+          final Date afterRefresh = Date.from(Instant.now().plusMillis(10));
+          final DateRangeParam afterRefreshRange =
+              new DateRangeParam(afterRefresh, Date.from(Instant.now().plusMillis(15)));
+
+          // Assert on isInKnownBounds
+          Assert.assertTrue(
+              "Known bound should include a time range before refresh",
+              filterManager.isInKnownBounds(beforeRefreshRange));
+          Assert.assertFalse(
+              "Known bound should not include a time range after refresh",
+              filterManager.isInKnownBounds(afterRefreshRange));
+          Assert.assertFalse(
+              "Unbounded lower range always match null lastUpdated which are not known",
+              filterManager.isInKnownBounds(beforeLoadUnbounded));
+
+          // Assert on isResultSetEmpty
           Assert.assertTrue(
               "Expected date range to not have a matching filter",
-              filterManager.isResultSetEmpty(SAMPLE_BENE, afterSampleARange));
+              filterManager.isResultSetEmpty(SAMPLE_BENE, beforeRefreshRange));
           Assert.assertTrue(
               "Expected date range to not have a matching filter",
-              filterManager.isResultSetEmpty(INVALID_BENE, afterSampleARange));
+              filterManager.isResultSetEmpty(INVALID_BENE, beforeRefreshRange));
         });
   }
 
@@ -152,7 +171,9 @@ public final class LoadedFilterManagerIT {
     RifFilesEvent rifFilesEvent =
         new RifFilesEvent(
             Instant.now(),
-            sampleResources.stream().map(r -> r.toRifFile()).collect(Collectors.toList()));
+            sampleResources.stream()
+                .map(StaticRifResource::toRifFile)
+                .collect(Collectors.toList()));
 
     // Create the processors that will handle each stage of the pipeline.
     MetricRegistry loadAppMetrics = new MetricRegistry();

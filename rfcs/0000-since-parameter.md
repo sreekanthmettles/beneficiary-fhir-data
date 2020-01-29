@@ -52,7 +52,9 @@ BFD's end-points follow the FHIR specification. All the proposed API changes are
 
 The first improvement is to add the `lastUpdated` field to the metadata object of a resource. The current implementation does not return any `lastUpdated` field. The proposal adds this field with the timestamp that the ETL process wrote to the master DB. Like all FHIR date fields, this timestamp must include the server's timezone \[[4](#ref4)\]. Resources based on records loaded before this RFC do not have a `lastUpdated` field. 
 
-The second change is to support the `_lastUpdated` query parameter for resource searches per the FHIR specification \[[5](#ref5)\]. FHIR specifies a set of comparison operators to go along with this filter. BFD supports the `eq`, `lt`, `le`, `gt` and `ge` operators. Two `_lastUpdated` parameters can be specified to form the upper and lower bounds of a time interval. Searches with a `_lastUpdated` parameter do not match resources without a `lastUpdated` field. A query without a `_lastUpdated` parameter is needed to retrieve these resources. 
+The second change is to support the `_lastUpdated` query parameter for resource searches per the FHIR specification \[[5](#ref5)\]. FHIR specifies a set of comparison operators to go along with this filter. BFD supports the `eq`, `lt`, `le`, `gt` and `ge` operators. Two `_lastUpdated` parameters can be specified to form the upper and lower bounds of a time interval. 
+
+Many records in the BFD database where loaded before this RFC and have a null `lastUpdated` field. The BFD treats these records as if they have an early `lastUpdated` value. Searches with a `_lastUpdated` parameter without a lower bound match these records; Likewise, searches with a lower bound never match these records. This design allows a single query to retrieve both records with and without a `lastUpdate`. 
 
 ### Bulk Export Implementors Details
 
